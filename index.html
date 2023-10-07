@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>مترجم عربي</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="wrap">
+
+    <div class="bismillah">
+      بِسْمِ اللَّـهِ الرَّحْمَـٰنِ الرَّحِيمِ
+    </div>
+
+    <header class="header card">
+      <div class="brand">
+        <img src="logo.svg" alt="Logo" class="logo" />
+        <div>
+          <h1 class="title">🌐 مترجم عربي</h1>
+          <div class="subtitle">ترجمة بين العربية والإنجليزية/الفرنسية — داخل المتصفح</div>
+        </div>
+      </div>
+      <div class="status pill" id="status">جاهز</div>
+    </header>
+
+    <section class="grid">
+      <!-- Left card -->
+      <div class="card">
+        <div class="toprow">
+          <label for="leftLang" class="label">اللغة:</label>
+          <select id="leftLang" class="select small">
+            <option value="ar" selected>العربية (AR)</option>
+            <option value="en">English (EN)</option>
+            <option value="fr">Français (FR)</option>
+          </select>
+
+          <button id="listenBtn" class="btn small">🎙️ استمع</button>
+          <button id="copyLeftBtn" class="btn small">📋 نسخ</button>
+        </div>
+
+        <label for="leftText" class="label">النص:</label>
+        <textarea id="leftText" class="textarea" placeholder="اكتب هنا..."></textarea>
+
+        <div class="actions">
+          <button id="toRightBtn" class="btn primary">➡️ ترجم إلى اليمين</button>
+        </div>
+      </div>
+
+      <!-- Right card -->
+      <div class="card">
+        <div class="toprow">
+          <label for="rightLang" class="label">اللغة:</label>
+          <select id="rightLang" class="select small">
+            <option value="en" selected>English (EN)</option>
+            <option value="fr">Français (FR)</option>
+            <option value="ar">العربية (AR)</option>
+          </select>
+
+          <button id="copyRightBtn" class="btn small">📋 نسخ</button>
+</div>
+
+        <label for="rightText" class="label">الترجمة:</label>
+        <textarea id="rightText" class="textarea" placeholder="ستظهر الترجمة هنا..."></textarea>
+
+        <div class="actions">
+          <button id="toLeftBtn" class="btn secondary">⬅️ ترجم إلى اليسار</button>
+        </div>
+      </div>
+    </section>
+
+<!-- Common actions -->
+<section class="card common">
+  <div class="common-row">
+    <div class="pill">أدوات عامة</div>
+    </div>
+  <div class="muted" style="margin-top:8px;">
+    • سيتم حفظ آخر نص واللغات تلقائياً على هذا المتصفح.
+  </div>
+</section>
+
+
+<!-- Erase card (under text areas) -->
+<section class="card erase-card">
+  <div class="erase-row">
+    <button id="clearBtn" class="btn erase-btn" title="مسح النصين" aria-label="مسح النصين">🧹</button>
+  </div>
+</section>
+
+    <div class="note card">
+      <strong>ملاحظات:</strong>
+      <ul>
+        <li>الترجمة تحتاج اتصال إنترنت.</li>
+        <li>زر الاستماع يعمل غالباً في Chrome/Edge ويحتاج <span class="mono">https</span> أو <span class="mono">localhost</span>.</li>
+      </ul>
+    </div>
+
+    <div id="toast" class="toast" aria-live="polite"></div>
+  
+
+
+</main>
+
+<script>
+(() => {
+  const leftText = document.getElementById("leftText");
+  const rightText = document.getElementById("rightText");
+  const leftLang = document.getElementById("leftLang");
+  const rightLang = document.getElementById("rightLang");
+
+  const toRightBtn = document.getElementById("toRightBtn");
+  const toLeftBtn = document.getElementById("toLeftBtn");
+  const clearBtn = document.getElementById("clearBtn");
+
+  const copyLeftBtn = document.getElementById("copyLeftBtn");
+  const copyRightBtn = document.getElementById("copyRightBtn");
+  const listenBtn = document.getElementById("listenBtn");
+
+  const status = document.getElementById("status");
+  const toastEl = document.getElementById("toast");
+
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastEl._t);
+    toastEl._t = setTimeout(() => toastEl.classList.remove("show"), 1600);
+  }
+  function setStatus(s) { status.textContent = s; }
+
+// ---------------- حفظ آخر نص ولغات تلقائياً (localStorage) ----------------
+const STORE_KEY = "arabic_translator_state_v1";
+
+function saveState() {
+  try {
+    const state = {
+      leftText: leftText.value || "",
+      rightText: rightText.value || "",
+      leftLang: leftLang.value || "ar",
+      rightLang: rightLang.value || "en"
+    };
+    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  } catch (_) {}
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (s.leftLang) leftLang.value = s.leftLang;
+    if (s.rightLang) rightLang.value = s.rightLang;
+    if (typeof s.leftText === "string") leftText.value = s.leftText;
+    if (typeof s.rightText === "string") rightText.value = s.rightText;
+  } catch (_) {}
+}
+
+loadState();
+
+// Save on changes (typing + language changes)
+["input", "change"].forEach(evt => {
+  leftText.addEventListener(evt, saveState);
+  rightText.addEventListener(evt, saveState);
+  leftLang.addEventListener(evt, saveState);
+  rightLang.addEventListener(evt, saveState);
+});
+
+  // ---------------- Translation (Google unofficial endpoint) ----------------
+  async function translateGoogle(text, source, target) {
+    const url = new URL("https://translate.googleapis.com/translate_a/single");
+    url.searchParams.set("client", "gtx");
+    url.searchParams.set("sl", source || "auto");
+    url.searchParams.set("tl", target);
+    url.searchParams.set("dt", "t");
+    url.searchParams.set("q", text);
+
+    const res = await fetch(url.toString());
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    const pieces = (data && data[0]) ? data[0].map(x => x[0]).filter(Boolean) : [];
+    return pieces.join("");
+  }
+
+  async function doTranslate(fromEl, fromLangEl, toEl, toLangEl) {
+    const text = (fromEl.value || "").trim();
+    if (!text) return;
+
+    const sl = fromLangEl.value || "auto";
+    const tl = toLangEl.value;
+
+    setStatus("يترجم…");
+    try {
+      const out = await translateGoogle(text, sl, tl);
+      toEl.value = out || "";
+      toast("تمت الترجمة ✅");
+      setStatus("جاهز");
+    } catch (e) {
+      console.error(e);
+      setStatus("خطأ");
+      toast("فشل الترجمة — تحقق من الاتصال أو شغّل عبر localhost/https");
+      setTimeout(() => setStatus("جاهز"), 900);
+    }
+  }
+
+  toRightBtn.addEventListener("click", async () => { await doTranslate(leftText, leftLang, rightText, rightLang); saveState(); });
+  toLeftBtn.addEventListener("click", async () => { await doTranslate(rightText, rightLang, leftText, leftLang); saveState(); });
+
+  // ---------------- Copy ----------------
+  async function copyTextSmart(textarea) {
+    const t = (textarea.value || "").trim();
+    if (!t) return false;
+
+    if (window.isSecureContext && navigator.clipboard?.writeText) {
+      try { await navigator.clipboard.writeText(t); return true; } catch (e) {}
+    }
+    try {
+      textarea.focus();
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
+      return document.execCommand("copy");
+    } catch (e) {}
+    return false;
+  }
+
+  copyLeftBtn.addEventListener("click", async () => {
+    const ok = await copyTextSmart(leftText);
+    toast(ok ? "تم النسخ ✅" : "فشل النسخ");
+  });
+  copyRightBtn.addEventListener("click", async () => {
+    const ok = await copyTextSmart(rightText);
+    toast(ok ? "تم النسخ ✅" : "فشل النسخ");
+  });
+
+  // ---------------- Clear ----------------
+  clearBtn.addEventListener("click", () => {
+    leftText.value = "";
+    rightText.value = "";
+    toast("تم المسح ✅");
+    saveState();
+    leftText.focus();
+  });
+
+  // ---------------- Listen (Speech-to-Text) ----------------
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null;
+  let listening = false;
+
+  function startListen() {
+    if (!SpeechRecognition) {
+      toast("الميزة غير مدعومة في هذا المتصفح");
+      return;
+    }
+    if (!rec) {
+      rec = new SpeechRecognition();
+      rec.continuous = true;
+      rec.interimResults = true;
+
+      rec.onstart = () => {
+        listening = true;
+        listenBtn.textContent = "🛑 إيقاف";
+        setStatus("يستمع…");
+      };
+      rec.onend = () => {
+        listening = false;
+        listenBtn.textContent = "🎙️ استمع";
+        setStatus("جاهز");
+      };
+      rec.onerror = (e) => {
+        console.error(e);
+        toast("خطأ في الاستماع");
+      };
+      rec.onresult = (event) => {
+        let finalText = "";
+        let interimText = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const res = event.results[i];
+          const transcript = res[0].transcript;
+          if (res.isFinal) finalText += transcript;
+          else interimText += transcript;
+        }
+        const base = leftText.dataset.baseText ?? leftText.value;
+        if (finalText) {
+          const newBase = (base + (base.trim() ? "\n" : "") + finalText).trim();
+          leftText.value = newBase;
+          leftText.dataset.baseText = newBase;
+        }
+        if (interimText) {
+          const stable = leftText.dataset.baseText ?? "";
+          leftText.value = stable + "\n" + interimText;
+        }
+      };
+    }
+
+    // default: listen in Arabic Algeria when Arabic selected, otherwise follow leftLang
+    const lang = leftLang.value || "ar";
+    rec.lang = (lang === "ar") ? "ar-DZ" : lang;
+    leftText.dataset.baseText = leftText.value.trim();
+    try { rec.start(); } catch(_) {}
+  }
+
+  function stopListen() {
+    try { rec && rec.stop(); } catch(_) {}
+  }
+
+  listenBtn.addEventListener("click", () => {
+    if (listening) stopListen();
+    else startListen();
+  });
+})();
+</script>
+</body>
+</html>
